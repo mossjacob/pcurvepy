@@ -6,46 +6,77 @@ from scipy.interpolate import UnivariateSpline
 
 class PrincipalCurve:
     def __init__(self, k = 3):
+        """
+        Constructs a Principal Curve with degree k.
+        Attributes:
+          order: argsort of pseudotimes
+          points: curve
+          points_interp: data projected onto curve
+          pseudotimes: pseudotimes
+          pseudotimes_interp: pseudotimes of data projected onto curve in data order
+        :param k: polynomial spline degree
+        """
         self.k = k
-        self.p = None
-        self.s = None
-        self.p_interp = None
-        self.s_interp = None
+        self.order = None
+        self.points = None
+        self.pseudotimes = None
+        self.points_interp = None
+        self.pseudotimes_interp = None
 
     def project(self, X):
-        s_interp, p_interp, d_sq = self.project_on(X, self.p, self.s)
-        self.s_interp = s_interp
-        self.p_interp = p_interp
+        s_interp, p_interp, d_sq = self.project_on(X, self.points, self.pseudotimes)
+        self.pseudotimes_interp = s_interp
+        self.points_interp = p_interp
         return s_interp, p_interp, d_sq
 
-    def project_on(self, X, p, s):
-        '''
+    def project_on(self, X, points, pseudotimes):
+        """
         Get interpolating s values for projection of X onto the curve defined by (p, s)
         @param X: data
-        @param p: curve points
-        @param s: curve parameterisation
+        @param points: curve points
+        @param pseudotimes: curve parameterisation
         @returns: interpolating parameter values, projected points on curve, sum of square distances
-        '''
+        """
         s_interp = np.zeros(X.shape[0])
         p_interp = np.zeros(X.shape)
         d_sq = list()
 
         for i in range(0, X.shape[0]):
             z = X[i, :]
-            seg_proj = (((p[1:] - p[0:-1]).T)*np.einsum('ij,ij->i', z - p[0:-1], p[1:] - p[0:-1])/np.power(np.linalg.norm(p[1:] - p[0:-1], axis = 1), 2)).T # compute parallel component
-            proj_dist = (z - p[0:-1]) - seg_proj # compute perpendicular component 
-            dist_endpts = np.minimum(np.linalg.norm(z - p[0:-1], axis = 1), np.linalg.norm(z - p[1:], axis = 1))
+            numerator = (points[1:] - points[0:-1]).T * np.einsum('ij,ij->i', z - points[0:-1], points[1:] - points[0:-1])
+            denominator = np.power(np.linalg.norm(points[1:] - points[0:-1], axis=1), 2)
+            seg_proj = (numerator / denominator).T  # compute parallel component
+            proj_dist = (z - points[0:-1]) - seg_proj  # compute perpendicular component
+            dist_endpts = np.minimum(np.linalg.norm(z - points[0:-1], axis=1), np.linalg.norm(z - points[1:], axis = 1))
             dist_seg = np.maximum(np.linalg.norm(proj_dist, axis = 1), dist_endpts)
 
             idx_min = np.argmin(dist_seg)
             q = seg_proj[idx_min] 
-            s_interp[i] = (np.linalg.norm(q)/np.linalg.norm(p[idx_min + 1, :] - p[idx_min, :]))*(s[idx_min+1]-s[idx_min]) + s[idx_min]
-            p_interp[i] = (s_interp[i] - s[idx_min])*(p[idx_min+1, :] - p[idx_min, :]) + p[idx_min, :]
+            s_interp[i] = (np.linalg.norm(q) / np.linalg.norm(points[idx_min + 1, :] - points[idx_min, :])) * (pseudotimes[idx_min + 1] - pseudotimes[idx_min]) + pseudotimes[idx_min]
+            p_interp[i] = (s_interp[i] - pseudotimes[idx_min]) * (points[idx_min + 1, :] - points[idx_min, :]) + points[idx_min, :]
             d_sq.append(np.linalg.norm(proj_dist[idx_min])**2)
 
         d_sq = np.array(d_sq)
+        self.order = s_interp.argsort()
         return s_interp, p_interp, d_sq
-     
+
+    def project_and_spline(self, X, p, s):
+        s = self.renorm_parameterisation(p)
+        s_interp, p_interp, d_sq = self.project_on(X, p, s)
+        order = np.argsort(s_interp)
+
+        spline = [UnivariateSpline(s_interp[order], X[order, j], k=self.k, w=None) for j in range(0, X.shape[1])]
+
+        # p is the set of J functions producing a smooth curve in R^J
+        p = np.zeros((len(s_interp), X.shape[1]))
+        for j in range(0, X.shape[1]):
+            p[:, j] = spline[j](s_interp[order])
+
+        idx = [i for i in range(0, p.shape[0] - 1) if (p[i] != p[i + 1]).any()]
+        p = p[idx, :]
+        s = self.renorm_parameterisation(p)  # normalise to unit speed
+        return s, p, d_sq
+
     def renorm_parameterisation(self, p):
         '''
         Renormalise curve to unit speed 
@@ -92,7 +123,7 @@ class PrincipalCurve:
             # 2. Use pseudotimes (s_interp) to order the data and apply a spline interpolation in each data dimension j
             order = np.argsort(s_interp)
 
-            spline = [UnivariateSpline(s_interp[order], X[order, j], k = self.k, w = w) for j in range(0, X.shape[1])]
+            spline = [UnivariateSpline(s_interp[order], X[order, j], k=self.k, w=w) for j in range(0, X.shape[1])]
 
             # p is the set of J functions producing a smooth curve in R^J
             p = np.zeros((len(s_interp), X.shape[1]))
@@ -103,7 +134,7 @@ class PrincipalCurve:
             p = p[idx, :]
             s = self.renorm_parameterisation(p)  # normalise to unit speed
             
-        self.s = s
-        self.p = p
-        self.p_interp = p_interp
-        self.s_interp = s_interp
+        self.pseudotimes = s
+        self.points = p
+        self.points_interp = p_interp
+        self.pseudotimes_interp = s_interp

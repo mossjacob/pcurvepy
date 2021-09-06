@@ -23,6 +23,23 @@ class PrincipalCurve:
         self.points_interp = None
         self.pseudotimes_interp = None
 
+    @staticmethod
+    def from_params(s, p, order=None):
+        """
+        Constructs a PrincipalCurve. If no order given, an ordered input is assumed.
+        """
+        curve = PrincipalCurve()
+        curve.update(s, p, order=order)
+        return curve
+
+    def update(self, s_interp, p_interp, order=None):
+        self.pseudotimes_interp = s_interp
+        self.points_interp = p_interp
+        if order is None:
+            self.order = np.arange(s.shape[0])
+        else:
+            self.order = order
+
     def project(self, X):
         s_interp, p_interp, d_sq = self.project_on(X, self.points, self.pseudotimes)
         self.pseudotimes_interp = s_interp
@@ -59,6 +76,14 @@ class PrincipalCurve:
         d_sq = np.array(d_sq)
         self.order = s_interp.argsort()
         return s_interp, p_interp, d_sq
+
+    def project_to_curve(self, X, p):
+        s = self.renorm_parameterisation(p)
+        s_interp, p_interp, d_sq = self.project_on(X, p, s)
+        return s_interp, p_interp, d_sq
+
+    def unpack_params(self):
+        return self.pseudotimes_interp, self.points_interp, self.order
 
     def project_and_spline(self, X, p, s):
         s = self.renorm_parameterisation(p)

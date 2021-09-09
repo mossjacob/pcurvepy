@@ -36,7 +36,7 @@ class PrincipalCurve:
         self.pseudotimes_interp = s_interp
         self.points_interp = p_interp
         if order is None:
-            self.order = np.arange(s.shape[0])
+            self.order = np.arange(s_interp.shape[0])
         else:
             self.order = order
 

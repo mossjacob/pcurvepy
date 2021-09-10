@@ -163,3 +163,4 @@ class PrincipalCurve:
         self.points = p
         self.points_interp = p_interp
         self.pseudotimes_interp = s_interp
+        self.order = order

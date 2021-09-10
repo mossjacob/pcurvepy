@@ -155,12 +155,12 @@ class PrincipalCurve:
             for j in range(0, X.shape[1]):
                 p[:, j] = spline[j](s_interp[order])
 
-            idx = [i for i in range(0, p.shape[0]-1) if (p[i] != p[i+1]).any()]
+            idx = [i for i in range(0, p.shape[0]-1) if (p[i] != p[i+1]).any()] # remove duplicate consecutive points?
             p = p[idx, :]
             s = self.renorm_parameterisation(p)  # normalise to unit speed
             
         self.pseudotimes = s
         self.points = p
-        self.points_interp = p_interp
         self.pseudotimes_interp = s_interp
+        self.points_interp = p_interp
         self.order = order

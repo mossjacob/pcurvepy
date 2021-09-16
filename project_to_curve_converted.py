@@ -1,10 +1,10 @@
+import numpy as np
+
 
 def project_to_curve(x, s, stretch = 2):
     nseg = s.shape[0] - 1
     npts = x.shape[0]
     ncols = x.shape[1]
-    print('nseg', nseg, 'ncols', ncols)
-    print('x', x.shape, 's', s.shape)
 
     # argument checks
     if s.shape[1] != ncols:
@@ -55,9 +55,9 @@ def project_to_curve(x, s, stretch = 2):
 
 
     # allocate output data structures
-    new_s = np.zeros((npts, ncols))    # projections of x onto s
+    new_points = np.zeros((npts, ncols))    # projections of x onto s
     pseudotime = np.zeros(npts)           # distance from start of the curve
-    dist_ind = np.zeros(npts)         # distances between x and new_s
+    dist_ind = np.zeros(npts)         # distances between x and new_points
 
     # pre-allocate intermediate vectors
     n_test = np.zeros(ncols)
@@ -115,8 +115,8 @@ def project_to_curve(x, s, stretch = 2):
         pseudotime[i] = bestlam
         dist_ind[i] = bestdi
         for k in range(ncols):
-            # new_s[k * npts + i] = n[k]
-            new_s[i, k] = n[k]
+            # new_points[k * npts + i] = n[k]
+            new_points[i, k] = n[k]
 
 
     # get ordering from old pseudotime
@@ -125,7 +125,7 @@ def project_to_curve(x, s, stretch = 2):
     # calculate total dist
     dist = dist_ind.sum()
 
-    # recalculate pseudotime for new_s
+    # recalculate pseudotime for new_points
     pseudotime[new_ord[0]] = 0
 
     for i in range(1, new_ord.shape[0]):
@@ -133,14 +133,14 @@ def project_to_curve(x, s, stretch = 2):
         m = new_ord[i]
 
         # OPTIMISATION: compute pseudotime[o1] manually
-        #   NumericVector p1 = new_s(o1, _)
-        #   NumericVector p0 = new_s(o0, _)
+        #   NumericVector p1 = new_points(o1, _)
+        #   NumericVector p0 = new_points(o0, _)
         #   pseudotime[o1] = pseudotime[o0] + sqrt(sum(pow(p1 - p0, 2.0)))
         w = 0
         for k in range(ncols):
-            v = new_s[m, k] - new_s[l, k]
+            v = new_points[m, k] - new_points[l, k]
             w += v * v
         pseudotime[m] = pseudotime[l] + np.sqrt(w)
     # END OPTIMISATION
 
-    return PrincipalCurve.from_params(pseudotime, new_s, order=ord), dist_ind, dist
+    return pseudotime, new_points, new_ord, dist_ind, dist

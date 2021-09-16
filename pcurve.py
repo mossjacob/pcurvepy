@@ -126,8 +126,8 @@ class PrincipalCurve:
             w = np.linalg.norm(seg_proj)
             pseudotime[m] = pseudotime[l] + w
 
-        pseudotime_min = pseudotime.min()
-        pseudotime = (pseudotime - pseudotime_min) / (pseudotime.max() - pseudotime_min)
+        # pseudotime_min = pseudotime.min()
+        # pseudotime = (pseudotime - pseudotime_min) / (pseudotime.max() - pseudotime_min)
 
         self.pseudotimes_interp = pseudotime
         self.points_interp = new_points

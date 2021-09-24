@@ -1,9 +1,16 @@
 # pcurvepy
-### Principal curves implementation (Hastie '89) in Python
+### Principal Curves 
+
+This is an implementation of the Principal Curves (Hastie '89) algorithm in Python.
+
+It is a fork of the `zsteve` package with some changes in 
+how the projection indices are selected. It follows the 
+`princurve` R/C++ package more closely.
 
 Installation:
 ```
-pip install pcurvepy
+pip install git+https://github.com/mossjacob/pcurvepy
+
 ```
 
 Example:
@@ -21,11 +28,15 @@ x = data.loc[:, ('X1', 'X2')].to_numpy()
 x = x - np.mean(x, 0)
 index = np.arange(0, len(x))
 
-p = pcurve.PrincipalCurve(k=5)
-p.fit(x)
+curve = pcurve.PrincipalCurve(k=5)
+curve.fit(x)
 
 plt.scatter(x[:, 0], x[:, 1], alpha=0.25, c=index)
-plt.plot(p.points[:, 0], p.points[:, 1], c='k')
+plt.plot(curve.points[:, 0], curve.points[:, 1], c='k')
+
+# get interpolation indices
+pseudotime_interp, point_interp, order = curve.unpack_params()
+
 
 ```
 

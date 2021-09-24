@@ -40,10 +40,20 @@ class PrincipalCurve:
         else:
             self.order = order
 
-    def project_to_curve(self, X, points=None, stretch=2):
+    def project_to_curve(self, X, points=None, pseudotimes=None, stretch=0):
         """
-        Projects set of points `X` to a curve made up of points `points`
         Originally a Python translation of R/C++ package `princurve`
+        Projects set of points `X` to the closest point on a curve made up
+        of points `points`. Finds the projection index for a matrix of points `X`.
+        The curve need not be of the same
+        length as the number of points.
+        Parameters:
+            X: a matrix of data points.
+            points: a parametrized curve, represented by a polygon.
+            stretch: A stretch factor for the endpoints of the curve,
+                     allowing the curve to grow to avoid bunching at the end.
+                     Must be a numeric value between 0 and 2.
+
         """
         if points is None:
             points = self.points
@@ -164,29 +174,11 @@ class PrincipalCurve:
             s_interp[i] = (np.linalg.norm(q) / np.linalg.norm(x_diff)) * t_diff + pseudotimes[idx_min]
             p_interp[i] = (s_interp[i] - pseudotimes[idx_min]) * x_diff + points[idx_min, :]
 
-            #####
-            n_test = points[:-1] + seg_proj
-            w = np.square(n_test - z).sum(axis=1)
-            p_interp[i] = points[w.argmax()]
-            # p_interp[i] =
-
-            #####
             d_sq.append(np.linalg.norm(proj_dist[idx_min])**2)
 
         d_sq = np.array(d_sq)
         self.order = s_interp.argsort()
         return s_interp, p_interp, d_sq
-
-    def _project_to_curve(self, X, points=None):
-        """deprecated"""
-        if points is None:
-            points = self.points_interp
-        s = self.renorm_parameterisation(points)
-        s_interp, p_interp, d_sq = self._project_on(X, points, s)
-        self.pseudotimes_interp = s_interp
-        self.points_interp = p_interp
-        self.order = s_interp.argsort()
-        return self, d_sq, d_sq.sum()
 
     def unpack_params(self):
         return self.pseudotimes_interp, self.points_interp, self.order
@@ -234,8 +226,7 @@ class PrincipalCurve:
             d_sq_old = d_sq
 
             # 2. Use pseudotimes (s_interp) to order the data and apply a spline interpolation in each data dimension j
-            order = np.argsort(s_interp)
-
+            order = self.order
             spline = [UnivariateSpline(s_interp[order], X[order, j], k=self.k, w=w) for j in range(0, X.shape[1])]
 
             # p is the set of J functions producing a smooth curve in R^J
@@ -249,6 +240,3 @@ class PrincipalCurve:
             
         self.pseudotimes = s
         self.points = p
-        self.pseudotimes_interp = s_interp
-        self.points_interp = p_interp
-        self.order = order

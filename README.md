@@ -10,8 +10,8 @@ Example:
 
 ```python
 import pandas as pd
-import matplotlib as mp
 import matplotlib.pyplot as plt
+import numpy as np
 import pcurve
 
 data = pd.read_csv('test_data.csv')

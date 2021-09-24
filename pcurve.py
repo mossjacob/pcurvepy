@@ -90,12 +90,12 @@ class PrincipalCurve:
         length = np.square(diff).sum(axis=1)
         # length = np.power(np.linalg.norm(diff, axis=1), 2)
         length += 1e-7
-
         # allocate output data structures
         new_points = np.zeros((n_pts, n_features))  # projections of x onto s
-        pseudotime = np.zeros(n_pts)  # distance from start of the curve
+        new_pseudotimes = np.zeros(n_pts)  # distance from start of the curve
         dist_ind = np.zeros(n_pts)  # distances between x and new_s
-
+        s_interp = np.zeros(X.shape[0])
+        print('iter')
         # iterate over points in x
         for i in range(X.shape[0]):
             p = X[i, :]  # p is vector of dimensions
@@ -106,23 +106,39 @@ class PrincipalCurve:
             seg_proj[seg_proj < 0] = 0.
             seg_proj[seg_proj > 1.] = 1.
 
-            test_points = points[:-1] + (seg_proj * diff.T).T
+            projection = (seg_proj * diff.T).T
+            proj_dist = p - points[:-1] - projection
+            proj_sq_dist = np.square(proj_dist).sum(axis=1)
 
-            w = np.square(test_points - p).sum(axis=1)
-            j = w.argmin()
             # calculate position of projection and the distance
-            dist_ind[i] = w[j]
-            pseudotime[i] = j + .1 + .9 * seg_proj[j]
-            new_points[i] = test_points[j]
+            j = proj_sq_dist.argmin()
+            dist_ind[i] = proj_sq_dist[j]
+            new_pseudotimes[i] = j + .1 + .9 * seg_proj[j]
+            new_points[i] = p - proj_dist[j]
+
+            ####
+            dist_endpts = np.minimum(np.linalg.norm(p - points[:-1], axis=1), np.linalg.norm(p - points[1:], axis=1))
+
+            dist_seg = np.maximum(np.linalg.norm(proj_dist, axis=1), dist_endpts)
+            idx_min = np.argmin(dist_seg)
+            q = projection[idx_min]
+            t_diff = pseudotimes[idx_min + 1] - pseudotimes[idx_min]
+            x_diff = points[idx_min + 1, :] - points[idx_min, :]
+            s_interp[i] = (np.linalg.norm(q) / np.linalg.norm(x_diff)) * t_diff + pseudotimes[idx_min]
+
+            ####
+        print(new_pseudotimes)
+        print(s_interp)
+        print(pseudotimes)
 
         # get ordering from old pseudotime
-        new_ord = pseudotime.argsort()
+        new_ord = new_pseudotimes.argsort()
 
         # calculate total dist
         dist = dist_ind.sum()
 
         # recalculate pseudotime for new_s
-        pseudotime[new_ord[0]] = 0
+        new_pseudotimes[new_ord[0]] = 0
 
         for i in range(1, new_ord.shape[0]):
             l = new_ord[i - 1]
@@ -134,12 +150,12 @@ class PrincipalCurve:
             #   pseudotime[o1] = pseudotime[o0] + sqrt(sum(pow(p1 - p0, 2.0)))
             seg_proj = new_points[m, :] - new_points[l, :]
             w = np.linalg.norm(seg_proj)
-            pseudotime[m] = pseudotime[l] + w
-
+            new_pseudotimes[m] = new_pseudotimes[l] + w
+        print(new_pseudotimes)
         # pseudotime_min = pseudotime.min()
         # pseudotime = (pseudotime - pseudotime_min) / (pseudotime.max() - pseudotime_min)
 
-        self.pseudotimes_interp = pseudotime
+        self.pseudotimes_interp = new_pseudotimes
         self.points_interp = new_points
         self.order = new_ord
         return self, dist_ind, dist
@@ -218,7 +234,7 @@ class PrincipalCurve:
         
         for i in range(0, max_iter):
             # 1. Project data onto curve and set the pseudotime s_interp to be the arc length of the projections
-            _, dist_ind, d_sq = self.project_to_curve(X, points=p) # s not used?
+            _, dist_ind, d_sq = self.project_to_curve(X, points=p, pseudotimes=s) # s not used?
             s_interp, p_interp = self.pseudotimes_interp, self.points_interp
             d_sq = d_sq.sum()
             if np.abs(d_sq - d_sq_old) < tol:

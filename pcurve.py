@@ -122,14 +122,14 @@ class PrincipalCurve:
             dist_seg = np.maximum(np.linalg.norm(proj_dist, axis=1), dist_endpts)
             idx_min = np.argmin(dist_seg)
             q = projection[idx_min]
-            t_diff = pseudotimes[idx_min + 1] - pseudotimes[idx_min]
-            x_diff = points[idx_min + 1, :] - points[idx_min, :]
-            s_interp[i] = (np.linalg.norm(q) / np.linalg.norm(x_diff)) * t_diff + pseudotimes[idx_min]
+            # t_diff = pseudotimes[idx_min + 1] - pseudotimes[idx_min]
+            # x_diff = points[idx_min + 1, :] - points[idx_min, :]
+            # s_interp[i] = (np.linalg.norm(q) / np.linalg.norm(x_diff)) * t_diff + pseudotimes[idx_min]
 
             ####
-        print(new_pseudotimes)
-        print(s_interp)
-        print(pseudotimes)
+        # print(new_pseudotimes)
+        # print(s_interp)
+        # print(pseudotimes)
 
         # get ordering from old pseudotime
         new_ord = new_pseudotimes.argsort()
@@ -151,6 +151,7 @@ class PrincipalCurve:
             seg_proj = new_points[m, :] - new_points[l, :]
             w = np.linalg.norm(seg_proj)
             new_pseudotimes[m] = new_pseudotimes[l] + w
+
         print(new_pseudotimes)
         # pseudotime_min = pseudotime.min()
         # pseudotime = (pseudotime - pseudotime_min) / (pseudotime.max() - pseudotime_min)

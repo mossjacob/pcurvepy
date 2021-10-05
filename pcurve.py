@@ -95,7 +95,7 @@ class PrincipalCurve:
         new_pseudotimes = np.zeros(n_pts)  # distance from start of the curve
         dist_ind = np.zeros(n_pts)  # distances between x and new_s
         s_interp = np.zeros(X.shape[0])
-        print('iter')
+
         # iterate over points in x
         for i in range(X.shape[0]):
             p = X[i, :]  # p is vector of dimensions
@@ -152,7 +152,6 @@ class PrincipalCurve:
             w = np.linalg.norm(seg_proj)
             new_pseudotimes[m] = new_pseudotimes[l] + w
 
-        print(new_pseudotimes)
         # pseudotime_min = pseudotime.min()
         # pseudotime = (pseudotime - pseudotime_min) / (pseudotime.max() - pseudotime_min)
 

@@ -211,19 +211,19 @@ class PrincipalCurve:
         s = s/sum(seg_lens)
         return s
 
-    def initialise(self, X, initial_points):
-        self.project_to_curve(X, initial_points)
-
-    def fit(self, X, p, w=None, max_iter=10, tol=1e-3):
+    def fit(self, X, initial_points=None, w=None, max_iter=10, tol=1e-3):
         """
         Fit principal curve to data
         @param X: data
-        @param p: starting curve (optional) if None, then first principal components is used
+        @param initial_points: starting curve (optional) if None, then first principal components is used
         @param w: data weights (optional)
         @param max_iter: maximum number of iterations
         @param tol: tolerance for stopping condition
         @returns: None
         """
+        if self.pseudotimes_interp is None:
+            self.project_to_curve(X, points=initial_points)
+
         d_sq_old = np.Inf
 
         for i in range(0, max_iter):
@@ -231,10 +231,12 @@ class PrincipalCurve:
             # apply a spline interpolation in each data dimension j
             order = self.order
             pseudotimes_interp = self.pseudotimes_interp
+            pseudotimes_uniq, ind = np.unique(pseudotimes_interp[order], return_index=True)
+
             spline = [
                 UnivariateSpline(
-                    pseudotimes_interp[order],
-                    X[order, j],
+                    pseudotimes_uniq,
+                    X[order, j][ind],
                     k=self.k,
                     w=w
                 ) for j in range(0, X.shape[1])
@@ -243,7 +245,11 @@ class PrincipalCurve:
             p = np.zeros((len(pseudotimes_interp), X.shape[1]))
             for j in range(0, X.shape[1]):
                 p[:, j] = spline[j](pseudotimes_interp[order])
-
+            from matplotlib import pyplot as plt
+            plt.figure()
+            plt.title('testing')
+            plt.plot(p[:, 0], p[:, 1])
+            plt.figure()
             idx = [i for i in range(0, p.shape[0] - 1) if
                    (p[i] != p[i + 1]).any()]  # remove duplicate consecutive points?
             p = p[idx, :]

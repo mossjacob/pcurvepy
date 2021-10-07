@@ -210,8 +210,57 @@ class PrincipalCurve:
         s[1:] = np.cumsum(seg_lens)
         s = s/sum(seg_lens)
         return s
-    
-    def fit(self, X, p=None, w=None, max_iter=10, tol=1e-3):
+
+    def initialise(self, X, initial_points):
+        self.project_to_curve(X, initial_points)
+
+    def fit(self, X, p, w=None, max_iter=10, tol=1e-3):
+        """
+        Fit principal curve to data
+        @param X: data
+        @param p: starting curve (optional) if None, then first principal components is used
+        @param w: data weights (optional)
+        @param max_iter: maximum number of iterations
+        @param tol: tolerance for stopping condition
+        @returns: None
+        """
+        d_sq_old = np.Inf
+
+        for i in range(0, max_iter):
+            # 1. Use pseudotimes (s_interp) to order the data and
+            # apply a spline interpolation in each data dimension j
+            order = self.order
+            pseudotimes_interp = self.pseudotimes_interp
+            spline = [
+                UnivariateSpline(
+                    pseudotimes_interp[order],
+                    X[order, j],
+                    k=self.k,
+                    w=w
+                ) for j in range(0, X.shape[1])
+            ]
+            # p is the set of J functions producing a smooth curve in R^J
+            p = np.zeros((len(pseudotimes_interp), X.shape[1]))
+            for j in range(0, X.shape[1]):
+                p[:, j] = spline[j](pseudotimes_interp[order])
+
+            idx = [i for i in range(0, p.shape[0] - 1) if
+                   (p[i] != p[i + 1]).any()]  # remove duplicate consecutive points?
+            p = p[idx, :]
+            s = self.renorm_parameterisation(p)  # normalise to unit speed
+
+            # 2. Project data onto curve and set the pseudotime s_interp to be the arc length of the projections
+            _, dist_ind, d_sq = self.project_to_curve(X, points=p, pseudotimes=s)  # s not used?
+
+            d_sq = d_sq.sum()
+            if np.abs(d_sq - d_sq_old) < tol:
+                break
+            d_sq_old = d_sq
+
+        self.pseudotimes = s
+        self.points = p
+
+    def old_fit(self, X, p=None, w=None, max_iter=10, tol=1e-3):
         """
         Fit principal curve to data
         @param X: data

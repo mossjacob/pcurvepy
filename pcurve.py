@@ -158,7 +158,7 @@ class PrincipalCurve:
         self.pseudotimes_interp = new_pseudotimes
         self.points_interp = new_points
         self.order = new_ord
-        return self, dist_ind, dist
+        return dist_ind, dist
 
     def _project_on(self, X, points, pseudotimes):
         """
@@ -249,8 +249,8 @@ class PrincipalCurve:
             p = p[idx, :]
             s = self.renorm_parameterisation(p)  # normalise to unit speed
 
-            # 2. Project data onto curve and set the pseudotime s_interp to be the arc length of the projections
-            _, dist_ind, d_sq = self.project_to_curve(X, points=p, pseudotimes=s)  # s not used?
+            # 2. Project data onto curve and set the pseudotime to be the arc length of the projections
+            dist_ind, d_sq = self.project_to_curve(X, points=p, pseudotimes=s)  # s not used?
 
             d_sq = d_sq.sum()
             if np.abs(d_sq - d_sq_old) < tol:

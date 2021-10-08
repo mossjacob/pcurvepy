@@ -238,25 +238,14 @@ class PrincipalCurve:
                     pseudotimes_uniq,
                     X[order, j][ind],
                     k=self.k,
-                    w=w[order, j][ind] if w is not None else None
+                    w=w[order][ind] if w is not None else None
                 ) for j in range(0, X.shape[1])
             ]
             # p is the set of J functions producing a smooth curve in R^J
             p = np.zeros((len(pseudotimes_interp), X.shape[1]))
             for j in range(0, X.shape[1]):
                 p[:, j] = spline[j](pseudotimes_interp[order])
-            from matplotlib import pyplot as plt
-            plt.figure()
-            plt.title('ificate')
-            plt.scatter(X[order, 0][ind], X[order, 1][ind], c=pseudotimes_uniq)
-            plt.scatter(X[order, 0], X[order, 1], c='red', alpha=0.5)
-            plt.plot(self.points_interp[order, 0][ind], self.points_interp[order, 1][ind])
-            # plt.plot(p[:, 0], p[:, 1])
-            plt.ylim((-10, 10))
-            plt.figure()
-            plt.title('testing')
-            plt.plot(p[:, 0], p[:, 1])
-            plt.figure()
+
             idx = [i for i in range(0, p.shape[0] - 1) if
                    (p[i] != p[i + 1]).any()]  # remove duplicate consecutive points?
             p = p[idx, :]

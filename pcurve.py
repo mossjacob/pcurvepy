@@ -1,6 +1,5 @@
-import sklearn
 import numpy as np
-from sklearn.decomposition import PCA
+
 from scipy.interpolate import UnivariateSpline
 
 
@@ -185,6 +184,16 @@ class PrincipalCurve:
         @param tol: tolerance for stopping condition
         @returns: None
         """
+        if initial_points is None and self.points is None:
+            from sklearn.decomposition import PCA
+            pca = PCA(n_components=X.shape[1])
+            pca.fit(X)
+            pc1 = pca.components_[:, 0]
+
+            p = np.kron(np.dot(X, pc1)/np.dot(pc1, pc1), pc1).reshape(X.shape) # starting point for iteration
+            order = np.argsort([np.linalg.norm(p[0, :] - p[i, :]) for i in range(0, p.shape[0])])
+            initial_points = p[order]
+
         if self.pseudotimes_interp is None:
             self.project_to_curve(X, points=initial_points)
 

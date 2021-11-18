@@ -9,7 +9,7 @@ how the projection indices are selected. It follows the
 
 Installation:
 ```
-pip install git+https://github.com/gatocor/pcurvepy
+pip install git+https://github.com/mossjacob/pcurvepy
 
 ```
 

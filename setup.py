@@ -5,13 +5,12 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="pcurvepy", # Replace with your own username
-    version="0.0.10",
-    author="Stephen Zhang",
-    author_email="syz@math.ubc.ca",
+    version="1.0",
+    author="Jacob Moss",
     description="Principal curves implementation in Python",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/zsteve/pcurvepy",
+    url="https://github.com/mossjacob/pcurvepy",
     packages=["pcurve"],
     classifiers=[
         "Programming Language :: Python :: 3",

@@ -3,14 +3,13 @@
 
 This is an implementation of the Principal Curves (Hastie '89) algorithm in Python.
 
-It is a fork of the `zsteve` package with some changes in 
-how the projection indices are selected. It follows the 
-`princurve` R/C++ package more closely.
+It is a fork of the `zsteve/pcurvepy` package where 
+the projection indices are selected according to our 
+translation of the R/C++ `princurve` package.
 
 Installation:
 ```
 pip install git+https://github.com/mossjacob/pcurvepy
-
 ```
 
 Example:

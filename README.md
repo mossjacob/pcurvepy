@@ -9,7 +9,7 @@ translation of the R/C++ `princurve` package.
 
 Installation:
 ```
-pip install git+https://github.com/mossjacob/pcurvepy
+pip install pcurvepy2
 ```
 
 Example:

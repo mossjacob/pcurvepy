@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pcurvepy2"
-version = "0.1.4"
+version = "0.1.5"
 description = "Principal curves implementation in Python"
 authors = ["Jacob Moss <cob.mossy@gmail.com>"]
 readme = "README.md"
@@ -8,9 +8,9 @@ repository = "https://github.com/mossjacob/pcurvepy"
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.9"
-scipy = "^1.11.4"
-numpy = "1.25.2"
+python = "^3.7"
+scipy = "*"
+numpy = "*"
 
 
 [build-system]

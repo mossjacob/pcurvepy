@@ -4,7 +4,7 @@ from scipy.interpolate import UnivariateSpline
 
 
 class PrincipalCurve:
-    def __init__(self, k = 3):
+    def __init__(self, k=3):
         """
         Constructs a Principal Curve with degree k.
         Attributes:
@@ -21,6 +21,7 @@ class PrincipalCurve:
         self.pseudotimes = None
         self.points_interp = None
         self.pseudotimes_interp = None
+        self.spline = None
 
     @staticmethod
     def from_params(pseudotime, points, order=None):
@@ -114,7 +115,6 @@ class PrincipalCurve:
             dist_ind[i] = proj_sq_dist[j]
             new_pseudotimes[i] = j + .1 + .9 * seg_proj[j]
             new_points[i] = p - proj_dist[j]
-
             ####
             dist_endpts = np.minimum(np.linalg.norm(p - points[:-1], axis=1), np.linalg.norm(p - points[1:], axis=1))
 
@@ -206,7 +206,7 @@ class PrincipalCurve:
             pseudotimes_interp = self.pseudotimes_interp
             pseudotimes_uniq, ind = np.unique(pseudotimes_interp[order], return_index=True)
 
-            spline = [
+            self.spline = [
                 UnivariateSpline(
                     pseudotimes_uniq,
                     X[order, j][ind],
@@ -217,7 +217,7 @@ class PrincipalCurve:
             # p is the set of J functions producing a smooth curve in R^J
             p = np.zeros((len(pseudotimes_interp), X.shape[1]))
             for j in range(0, X.shape[1]):
-                p[:, j] = spline[j](pseudotimes_interp[order])
+                p[:, j] = self.spline[j](pseudotimes_interp[order])
 
             idx = [i for i in range(0, p.shape[0] - 1) if
                    (p[i] != p[i + 1]).any()]  # remove duplicate consecutive points?

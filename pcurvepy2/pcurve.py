@@ -197,7 +197,7 @@ class PrincipalCurve:
         if self.pseudotimes_interp is None:
             self.project_to_curve(X, points=initial_points)
 
-        d_sq_old = np.Inf
+        d_sq_old = np.inf
 
         for i in range(0, max_iter):
             # 1. Use pseudotimes (s_interp) to order the data and

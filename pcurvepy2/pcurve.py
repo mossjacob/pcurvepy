@@ -126,9 +126,6 @@ class PrincipalCurve:
             # s_interp[i] = (np.linalg.norm(q) / np.linalg.norm(x_diff)) * t_diff + pseudotimes[idx_min]
 
             ####
-        # print(new_pseudotimes)
-        # print(s_interp)
-        # print(pseudotimes)
 
         # get ordering from old pseudotime
         new_ord = new_pseudotimes.argsort()
@@ -174,7 +171,7 @@ class PrincipalCurve:
         s = s/sum(seg_lens)
         return s
 
-    def fit(self, X, initial_points=None, w=None, max_iter=10, tol=1e-3):
+    def fit(self, X, initial_points=None, w=None, s=None, max_iter=10, tol=1e-3):
         """
         Fit principal curve to data
         @param X: data
@@ -211,6 +208,7 @@ class PrincipalCurve:
                     pseudotimes_uniq,
                     X[order, j][ind],
                     k=self.k,
+                    s=s,
                     w=w[order][ind] if w is not None else None
                 ) for j in range(0, X.shape[1])
             ]

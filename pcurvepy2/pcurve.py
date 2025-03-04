@@ -171,7 +171,7 @@ class PrincipalCurve:
         s = s/sum(seg_lens)
         return s
 
-    def fit(self, X, initial_points=None, w=None, s=None, max_iter=10, tol=1e-3):
+    def fit(self, X, initial_points=None, w=None, param_s=None, max_iter=10, tol=1e-3):
         """
         Fit principal curve to data
         @param X: data
@@ -208,7 +208,7 @@ class PrincipalCurve:
                     pseudotimes_uniq,
                     X[order, j][ind],
                     k=self.k,
-                    s=s,
+                    s=param_s,
                     w=w[order][ind] if w is not None else None
                 ) for j in range(0, X.shape[1])
             ]

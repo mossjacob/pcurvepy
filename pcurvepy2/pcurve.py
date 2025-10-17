@@ -61,7 +61,8 @@ class PrincipalCurve:
         if points is None:
             points = self.points
 
-        assert points is not None, "points must be provided or fitted"
+        if points is None:
+            raise ValueError("points must be provided or fitted")
 
         # Num segments = points.shape[0] - 1
         n_pts = data.shape[0]
@@ -82,17 +83,18 @@ class PrincipalCurve:
 
         # perform stretch on end points of s
         # only perform stretch if s contains at least two rows
-        if stretch > 0 and points.shape[0] >= 2:
-            points = points.copy()
-            num_points = points.shape[0]
-            diff_start = points[0, :] - points[1, :]
-            diff_end = points[num_points - 1, :] - points[num_points - 2, :]
-            points[0, :] = points[0, :] + stretch * diff_start
-            points[num_points - 1, :] = points[num_points - 1, :] + stretch * diff_end
+        curve_points: np.ndarray = points
+        if stretch > 0 and curve_points.shape[0] >= 2:
+            curve_points = curve_points.copy()
+            num_points = curve_points.shape[0]
+            diff_start = curve_points[0, :] - curve_points[1, :]
+            diff_end = curve_points[num_points - 1, :] - curve_points[num_points - 2, :]
+            curve_points[0, :] = curve_points[0, :] + stretch * diff_start
+            curve_points[num_points - 1, :] = curve_points[num_points - 1, :] + stretch * diff_end
 
         # precompute distances between successive points in the curve
         # and the length of each segment
-        segment_diffs = points[1:] - points[:-1]
+        segment_diffs = curve_points[1:] - curve_points[:-1]
         segment_lengths = np.square(segment_diffs).sum(axis=1)
         # segment_lengths = np.power(np.linalg.norm(segment_diffs, axis=1), 2)
         segment_lengths += 1e-7
@@ -106,13 +108,13 @@ class PrincipalCurve:
             current_point = data[point_idx, :]
 
             # project current_point orthogonally onto the segment --  compute parallel component
-            seg_proj = (segment_diffs * (current_point - points[:-1])).sum(axis=1)
+            seg_proj = (segment_diffs * (current_point - curve_points[:-1])).sum(axis=1)
             seg_proj /= segment_lengths
             seg_proj[seg_proj < 0] = 0.0
             seg_proj[seg_proj > 1.0] = 1.0
 
             projection = (seg_proj * segment_diffs.T).T
-            proj_dist = current_point - points[:-1] - projection
+            proj_dist = current_point - curve_points[:-1] - projection
             proj_sq_dist = np.square(proj_dist).sum(axis=1)
 
             # calculate position of projection and the distance

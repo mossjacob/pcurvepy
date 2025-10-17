@@ -93,7 +93,6 @@ class PrincipalCurve:
         new_points = np.zeros((n_pts, n_features))  # projections of x onto s
         new_pseudotimes = np.zeros(n_pts)  # distance from start of the curve
         dist_ind = np.zeros(n_pts)  # distances between x and new_s
-        s_interp = np.zeros(X.shape[0])
 
         # iterate over points in x
         for i in range(X.shape[0]):
@@ -121,11 +120,6 @@ class PrincipalCurve:
             dist_seg = np.maximum(np.linalg.norm(proj_dist, axis=1), dist_endpts)
             idx_min = np.argmin(dist_seg)
             q = projection[idx_min]
-            # t_diff = pseudotimes[idx_min + 1] - pseudotimes[idx_min]
-            # x_diff = points[idx_min + 1, :] - points[idx_min, :]
-            # s_interp[i] = (np.linalg.norm(q) / np.linalg.norm(x_diff)) * t_diff + pseudotimes[idx_min]
-
-            ####
 
         # get ordering from old pseudotime
         new_ord = new_pseudotimes.argsort()

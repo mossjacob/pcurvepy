@@ -20,6 +20,7 @@ class TestPrincipalCurveFunctionality:
         # Check that the curve is approximately linear
         # The curve should have low residuals when fit to a line
         curve_points = pc.points
+        assert curve_points is not None
         # Fit a line to the curve points
         coeffs = np.polyfit(curve_points[:, 0], curve_points[:, 1], 1)
         predicted = np.polyval(coeffs, curve_points[:, 0])
@@ -70,6 +71,7 @@ class TestPrincipalCurveFunctionality:
         for i in range(5):
             order = pc.order
             pseudotimes_interp = pc.pseudotimes_interp
+            assert order is not None and pseudotimes_interp is not None
             pseudotimes_uniq, ind = np.unique(pseudotimes_interp[order], return_index=True)
 
             from scipy.interpolate import UnivariateSpline
@@ -84,8 +86,7 @@ class TestPrincipalCurveFunctionality:
             if len(idx) > 0:
                 p = p[idx, :]
 
-            s = pc.renorm_parameterisation(p)
-            dist_ind, total_dist = pc.project_to_curve(X, points=p, pseudotimes=s)
+            dist_ind, total_dist = pc.project_to_curve(X, points=p)
             distances.append(total_dist)
 
         # Distance should generally decrease (at least not increase significantly)
@@ -103,14 +104,15 @@ class TestPrincipalCurveFunctionality:
         pc.fit(X, max_iter=10)
 
         # For each data point, find the minimum distance to the curve
-        min_distances = []
+        min_distances: list[float] = []
+        assert pc.points is not None
         for point in X:
             distances = np.linalg.norm(pc.points - point, axis=1)
             min_distances.append(np.min(distances))
 
         # Most points should be close to the curve
-        mean_distance = np.mean(min_distances)
-        max_distance = np.max(min_distances)
+        mean_distance: float = float(np.mean(min_distances))
+        max_distance: float = float(np.max(min_distances))
 
         assert mean_distance < 0.2, f"Mean distance to curve too large: {mean_distance}"
         assert max_distance < 0.3, f"Max distance to curve too large: {max_distance}"
@@ -123,10 +125,6 @@ class TestPrincipalCurveFunctionality:
         X = np.column_stack([t, t**1.5])
 
         pc.fit(X, max_iter=10)
-
-        # Pseudotimes should be monotonically increasing when points are ordered by t
-        # Create a mapping from original indices to their rank in t
-        original_t_order = np.argsort(t)
 
         # Get pseudotimes for points in their original order
         pseudotimes = pc.pseudotimes_interp
@@ -170,6 +168,7 @@ class TestPrincipalCurveFunctionality:
         pc.fit(X, max_iter=10)
 
         # Get pseudotimes in curve order
+        assert pc.pseudotimes_interp is not None and pc.order is not None
         ordered_pseudotimes = pc.pseudotimes_interp[pc.order]
 
         # Check monotonicity
@@ -205,13 +204,14 @@ class TestPrincipalCurveFunctionality:
 
         # Check smoothness by looking at second derivatives (curvature)
         curve = pc.points
+        assert curve is not None
         if len(curve) > 3:
             # Calculate discrete second derivative
             first_diff = np.diff(curve, axis=0)
             second_diff = np.diff(first_diff, axis=0)
 
             # Second differences should not be too large (curve is smooth)
-            max_second_diff = np.max(np.linalg.norm(second_diff, axis=1))
+            max_second_diff: float = float(np.max(np.linalg.norm(second_diff, axis=1)))
             assert max_second_diff < 0.3, f"Curve has sharp angles, max second diff: {max_second_diff}"
 
     def test_fitted_curve_represents_data_center(self):
@@ -233,8 +233,9 @@ class TestPrincipalCurveFunctionality:
             segment_center = np.mean(segment_data, axis=0)
 
             # Find closest curve point to this segment
+            assert pc.points is not None
             distances = np.linalg.norm(pc.points - segment_center, axis=1)
-            min_dist = np.min(distances)
+            min_dist: float = float(np.min(distances))
 
             # Curve should pass within 1 unit of the segment center
             assert min_dist < 0.3, f"Curve too far from data center in segment {i}: {min_dist}"
@@ -286,6 +287,7 @@ class TestPrincipalCurveEdgeCases:
         pc.fit(X, max_iter=5)
 
         # Dimensions should be preserved
+        assert pc.points is not None and pc.points_interp is not None
         assert pc.points.shape[1] == 5
         assert pc.points_interp.shape[1] == 5
 
@@ -335,7 +337,7 @@ class TestPrincipalCurveEdgeCases:
         X = np.array([[0.0, 0.0], [1.0, 1.0]])
         points = np.array([[0.5, 0.5, 0.5]])  # 3D instead of 2D
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             pc.project_to_curve(X, points=points)
 
     def test_project_to_curve_insufficient_points_raises(self):
@@ -344,7 +346,7 @@ class TestPrincipalCurveEdgeCases:
         X = np.array([[0.0, 0.0], [1.0, 1.0]])
         points = np.array([[0.5, 0.5]])  # Only 1 point
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             pc.project_to_curve(X, points=points)
 
     def test_project_to_curve_negative_stretch_raises(self):
@@ -353,7 +355,7 @@ class TestPrincipalCurveEdgeCases:
         X = np.array([[0.0, 0.0], [1.0, 1.0]])
         points = np.array([[0.5, 0.5], [1.5, 1.5]])
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             pc.project_to_curve(X, points=points, stretch=-0.1)
 
     def test_from_params_without_order(self):
@@ -365,6 +367,7 @@ class TestPrincipalCurveEdgeCases:
 
         assert pc.pseudotimes_interp is not None
         assert pc.points_interp is not None
+        assert pc.order is not None
         assert len(pc.order) == len(pseudotime)
         # Default order should be sequential
         np.testing.assert_array_equal(pc.order, np.arange(len(pseudotime)))

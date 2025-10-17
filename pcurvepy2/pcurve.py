@@ -148,6 +148,9 @@ class PrincipalCurve:
         return dist_ind, total_distance
 
     def unpack_params(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        assert self.pseudotimes_interp is not None
+        assert self.points_interp is not None
+        assert self.order is not None
         return self.pseudotimes_interp, self.points_interp, self.order
 
     def renorm_parameterisation(self, curve_points: np.ndarray) -> np.ndarray:
@@ -161,8 +164,8 @@ class PrincipalCurve:
         segment_lengths = np.linalg.norm(curve_points[1:] - curve_points[:-1], axis=1)
         normalized_params = np.zeros(curve_points.shape[0])
         normalized_params[1:] = np.cumsum(segment_lengths)
-        normalized_params = normalized_params / sum(segment_lengths)
-        return normalized_params
+        total_length: float = float(np.sum(segment_lengths))
+        return normalized_params / total_length  # type: ignore
 
     def fit(
         self,
@@ -207,6 +210,7 @@ class PrincipalCurve:
             # apply a spline interpolation in each data dimension
             order = self.order
             pseudotimes_interp = self.pseudotimes_interp
+            assert order is not None and pseudotimes_interp is not None
             pseudotimes_unique, unique_indices = np.unique(pseudotimes_interp[order], return_index=True)
 
             splines = [
@@ -236,10 +240,10 @@ class PrincipalCurve:
                 points=curve_points,
             )
 
-            distance_sq = distance_sq.sum()
-            if np.abs(distance_sq - distance_sq_old) < tol:
+            total_distance_sq: float = float(dist_ind.sum())
+            if np.abs(total_distance_sq - distance_sq_old) < tol:
                 break
-            distance_sq_old = distance_sq
+            distance_sq_old = total_distance_sq
 
         self.pseudotimes = normalized_pseudotimes
         self.points = curve_points

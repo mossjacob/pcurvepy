@@ -1,10 +1,10 @@
 # pcurvepy
-### Principal Curves 
+### Principal Curves
 
 This is an implementation of the Principal Curves (Hastie '89) algorithm in Python.
 
-It is a fork of the `zsteve/pcurvepy` package where 
-the projection indices are selected according to our 
+It is a fork of the `zsteve/pcurvepy` package where
+the projection indices are selected according to our
 translation of the R/C++ `princurve` package.
 
 Installation:

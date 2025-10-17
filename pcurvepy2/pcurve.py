@@ -1,12 +1,12 @@
 import numpy as np
-
 from scipy.interpolate import UnivariateSpline
+from sklearn.decomposition import PCA
 
 
 class PrincipalCurve:
-    def __init__(self, k = 3):
+    def __init__(self, k: int = 3):
         """
-        Constructs a Principal Curve with degree k.
+        Constructs a Principal Curve of degree k.
         Attributes:
           order: argsort of pseudotimes
           points: curve
@@ -160,18 +160,18 @@ class PrincipalCurve:
         return self.pseudotimes_interp, self.points_interp, self.order
 
     def renorm_parameterisation(self, p):
-        '''
-        Renormalise curve to unit speed 
+        """
+        Renormalise curve to unit speed
         @param p: curve points
         @returns: new parameterisation
-        '''
+        """
         seg_lens = np.linalg.norm(p[1:] - p[:-1], axis=1)
         s = np.zeros(p.shape[0])
         s[1:] = np.cumsum(seg_lens)
-        s = s/sum(seg_lens)
+        s = s / sum(seg_lens)
         return s
 
-    def fit(self, X, initial_points=None, w=None, param_s=None, max_iter=10, tol=1e-3):
+    def fit(self, x: np.ndarray, initial_points=None, w=None, param_s=None, max_iter=10, tol=1e-3):
         """
         Fit principal curve to data
         @param X: data

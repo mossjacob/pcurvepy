@@ -1,4 +1,3 @@
 from .pcurve import PrincipalCurve
 
-
-__all__ = ['PrincipalCurve']
+__all__ = ["PrincipalCurve"]

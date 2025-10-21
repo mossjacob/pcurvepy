@@ -407,3 +407,127 @@ class TestPrincipalCurveEdgeCases:
         assert pc.points.shape[1] == 2
         # Should refine the initial curve
         assert len(pc.points) >= 2
+
+    def test_approx_points_reduces_curve_size(self):
+        """Test that approx_points parameter reduces the number of curve points"""
+        np.random.seed(42)
+        # Create data with many points
+        t = np.linspace(0, 2 * np.pi, 200)
+        X = np.column_stack([np.cos(t), np.sin(t)]) + np.random.randn(200, 2) * 0.05
+
+        # Fit with approx_points
+        pc_approx = PrincipalCurve(k=3)
+        pc_approx.fit(X, max_iter=10, approx_points=50)
+
+        # Fit without approx_points (should use default)
+        pc_full = PrincipalCurve(k=3)
+        pc_full.fit(X, max_iter=10, approx_points=0)
+
+        # Approximated curve should have exactly 50 points
+        assert pc_approx.points is not None
+        assert pc_approx.points.shape[0] == 50, f"Expected 50 points, got {pc_approx.points.shape[0]}"
+
+        # Full curve should have more points than approximated
+        assert pc_full.points is not None
+        assert pc_full.points.shape[0] > pc_approx.points.shape[0]
+
+    def test_approx_points_maintains_curve_quality(self):
+        """Test that approximated curves still fit the data well"""
+        np.random.seed(42)
+        t = np.linspace(0, 10, 100)
+        X = np.column_stack([t, 2 * t + 1]) + np.random.randn(100, 2) * 0.2
+
+        # Fit with approximation
+        pc = PrincipalCurve(k=3)
+        pc.fit(X, max_iter=10, approx_points=30)
+
+        # The curve should still be approximately linear
+        assert pc.points is not None
+        coeffs = np.polyfit(pc.points[:, 0], pc.points[:, 1], 1)
+        predicted = np.polyval(coeffs, pc.points[:, 0])
+        residuals = np.abs(pc.points[:, 1] - predicted)
+
+        assert np.mean(residuals) < 0.05, f"Approximated curve quality degraded: {np.mean(residuals)}"
+        assert abs(coeffs[0] - 2.0) < 0.05, f"Approximated curve slope should be ~2, got {coeffs[0]}"
+
+    def test_approx_points_performance_and_accuracy(self):
+        """Test that approx_points speeds up computation while maintaining accuracy"""
+        import time
+
+        np.random.seed(42)
+        # Create a large dataset with complex curve structure
+        t = np.linspace(0, 4 * np.pi, 500)
+        X = np.column_stack([t * np.cos(t), t * np.sin(t)]) + np.random.randn(500, 2) * 0.3
+
+        # Fit with approximation
+        pc_approx = PrincipalCurve(k=3)
+        start_approx = time.time()
+        pc_approx.fit(X, max_iter=200, approx_points=150)
+        time_approx = time.time() - start_approx
+
+        # Fit without approximation (use full dataset size)
+        pc_full = PrincipalCurve(k=3)
+        start_full = time.time()
+        pc_full.fit(X, max_iter=200, approx_points=0)
+        time_full = time.time() - start_full
+
+        # Approximation should be faster (or at least not significantly slower)
+        # We expect at least some speedup for large datasets
+        print(f"\nTime with approx_points=50: {time_approx:.3f}s")
+        print(f"Time with approx_points=0: {time_full:.3f}s")
+        print(f"Speedup: {time_full/time_approx:.2f}x")
+
+        # Approximation should generally be faster, but allow for some variance
+        # We don't enforce strict timing as it can vary by system
+        assert time_approx < time_full, f"Approximation unexpectedly slow: {time_approx:.3f}s vs {time_full:.3f}s"
+
+        # Now test accuracy: both curves should produce similar pseudotimes
+        # Project the same test data onto both curves
+        test_indices = np.random.choice(len(X), 50, replace=False)
+        X_test = X[test_indices]
+
+        # Get pseudotimes from both curves
+        _, _ = pc_approx.project_to_curve(X_test, points=pc_approx.points, stretch=0)
+        pseudo_approx = pc_approx.pseudotimes_interp.copy()  # type: ignore
+
+        _, _ = pc_full.project_to_curve(X_test, points=pc_full.points, stretch=0)
+        pseudo_full = pc_full.pseudotimes_interp.copy()  # type: ignore
+
+        # Normalize pseudotimes to [0, 1] for comparison
+        pseudo_approx_norm = (pseudo_approx - pseudo_approx.min()) / (pseudo_approx.max() - pseudo_approx.min())
+        pseudo_full_norm = (pseudo_full - pseudo_full.min()) / (pseudo_full.max() - pseudo_full.min())
+
+        # Compute correlation between pseudotimes
+        from scipy.stats import spearmanr
+
+        correlation, _ = spearmanr(pseudo_approx_norm, pseudo_full_norm)
+
+        print(f"Pseudotime correlation: {correlation:.4f}")
+
+        # Pseudotimes should be highly correlated (approximation preserves ordering)
+        assert (
+            correlation > 0.95
+        ), f"Approximated curve pseudotimes differ too much from full curve: correlation={correlation:.4f}"
+
+        # Check that projection distances are similar
+        # For each test point, find distance to nearest curve point
+        min_dist_approx = []
+        min_dist_full = []
+
+        for point in X_test:
+            dist_approx: float = np.min(np.linalg.norm(pc_approx.points - point, axis=1))
+            dist_full: float = np.min(np.linalg.norm(pc_full.points - point, axis=1))
+            min_dist_approx.append(dist_approx)
+            min_dist_full.append(dist_full)
+
+        # Mean distances should be similar (within 50% of each other)
+        mean_dist_approx = np.mean(min_dist_approx)
+        mean_dist_full = np.mean(min_dist_full)
+
+        print(f"Mean distance to approx curve: {mean_dist_approx:.4f}")
+        print(f"Mean distance to full curve: {mean_dist_full:.4f}")
+
+        ratio = max(mean_dist_approx, mean_dist_full) / min(mean_dist_approx, mean_dist_full)
+        assert (
+            ratio < 1.5
+        ), f"Approximated curve distances differ too much: {mean_dist_approx:.4f} vs {mean_dist_full:.4f}"

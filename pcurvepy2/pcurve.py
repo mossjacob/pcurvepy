@@ -9,13 +9,15 @@ class PrincipalCurve:
     def __init__(self, k: int = 3) -> None:
         """
         Constructs a Principal Curve of degree k.
+        Args:
+            k: polynomial spline degree of the principal curve.
+
         Attributes:
           order: argsort of pseudotimes
           points: curve
           points_interp: data projected onto curve
           pseudotimes: pseudotimes
           pseudotimes_interp: pseudotimes of data projected onto curve in data order
-        :param k: polynomial spline degree
         """
         self.k: int = k
         self.order: np.ndarray | None = None
@@ -169,6 +171,37 @@ class PrincipalCurve:
         total_length: float = float(np.sum(segment_lengths))
         return normalized_params / total_length  # type: ignore
 
+    def _approximate_curve(
+        self, curve_points: np.ndarray, pseudotimes_ordered: np.ndarray, order: np.ndarray, num_points: int
+    ) -> np.ndarray:
+        """
+        Approximate curve by resampling to a fixed number of points using linear interpolation.
+        Similar to R's approx() function.
+
+        Args:
+            curve_points: The curve points to approximate
+            pseudotimes_ordered: Pseudotimes corresponding to the ordered curve points
+            order: The ordering of points along the curve
+            num_points: Number of points to approximate the curve with
+
+        Returns:
+            Approximated curve points
+        """
+        # Create evenly spaced pseudotime values for interpolation
+        min_pseudo: float = np.min(pseudotimes_ordered)
+        max_pseudo: float = np.max(pseudotimes_ordered)
+        xout_lambda = np.linspace(min_pseudo, max_pseudo, num_points)
+
+        # Interpolate each dimension separately
+        approx_curve: np.ndarray = np.zeros((num_points, curve_points.shape[1]))
+        for dim_idx in range(curve_points.shape[1]):
+            # Get the ordered curve values for this dimension
+            y_values = curve_points[order, dim_idx]
+            # Interpolate
+            approx_curve[:, dim_idx] = np.interp(xout_lambda, pseudotimes_ordered, y_values)
+
+        return approx_curve
+
     def fit(
         self,
         data: np.ndarray,
@@ -177,6 +210,7 @@ class PrincipalCurve:
         param_s: float | None = None,
         max_iter: int = 10,
         tol: float = 1e-3,
+        approx_points: int | None = None,
     ) -> None:
         """
         Fit principal curve to data
@@ -187,8 +221,16 @@ class PrincipalCurve:
             param_s: positive smoothing factor used to choose the number of knots. Number of knots will be increased until the smoothing condition is satisfied.
             max_iter: maximum number of iterations
             tol: tolerance for stopping condition
+            approx_points: whether curves should be approximated by a fixed number of points.
+                          If None or 0, no approximation will be performed and curves will contain
+                          as many points as the input data. If numeric, curves will be approximated
+                          by this number of points (default = 150 or #cells, whichever is smaller).
 
         """
+        # Set default approx_points if None (similar to R implementation)
+        if approx_points is None:
+            approx_points = 150 if data.shape[0] > 150 else 0
+
         if initial_points is None and self.points is None:
             pca = PCA(n_components=data.shape[1])
             pca.fit(data)
@@ -234,6 +276,19 @@ class PrincipalCurve:
                 i for i in range(0, curve_points.shape[0] - 1) if (curve_points[i] != curve_points[i + 1]).any()
             ]  # remove duplicate consecutive points?
             curve_points = curve_points[non_duplicate_indices, :]
+
+            # Apply approximation if specified
+            if approx_points > 0 and curve_points.shape[0] > approx_points:
+                # Need to get pseudotimes for the non-duplicated curve points
+                ordered_pseudotimes = pseudotimes_interp[order][non_duplicate_indices]
+                # Create new order for the approximated curve
+                curve_points = self._approximate_curve(
+                    curve_points,
+                    ordered_pseudotimes,
+                    np.arange(len(ordered_pseudotimes)),  # order is sequential after removing duplicates
+                    approx_points,
+                )
+
             normalized_pseudotimes = self.renorm_parameterisation(curve_points)  # normalise to unit speed
 
             # 2. Project data onto curve and set the pseudotime to be the arc length of the projections
